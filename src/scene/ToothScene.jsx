@@ -47,14 +47,15 @@ export default function ToothScene({ editMode }) {
     <group onPointerMissed={handlePointerMissed}>
       {toothIds.map((id) => (
         <ToothNode
-          key={id}
+		  key={id}
           toothId={id}
           glbUrl={`/models/tooth_${id}.glb`}
           axisDef={axisDefFor(id)}
           selected={selectedId === id}
           onSelect={() => setSelectedId(id)}
-          onGizmoDragStart={() => setIsDraggingGizmo(true)}
-          onGizmoDragEnd={() => setIsDraggingGizmo(false)}
+          editMode={editMode}
+          onEditDragStart={() => setIsDraggingGizmo(true)}
+          onEditDragEnd={() => setIsDraggingGizmo(false)}
         />
       ))}
     </group>

@@ -36,7 +36,7 @@ export default function App() {
         <directionalLight position={[-80, -30, 60]} intensity={0.25} />
         <Environment preset="studio" />
 
-        <ArcballControls makeDefault />
+        {!editMode ? <ArcballControls makeDefault /> : null}
 
         <ToothScene editMode={editMode} />
       </Canvas>
