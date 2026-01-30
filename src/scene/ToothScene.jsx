@@ -20,8 +20,8 @@ export default function ToothScene({ editMode, transformMode }) {
 
   useEffect(() => {
     if (!controls) return
-    controls.enabled = !(editMode || isDraggingGizmo)
-  }, [controls, editMode, isDraggingGizmo])
+    controls.enabled = !isDraggingGizmo
+  }, [controls, isDraggingGizmo])
 
   useEffect(() => {
     loadCoordStep0('/CoordStep0.txt').then(setCoordMap).catch((e) => {

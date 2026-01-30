@@ -19,6 +19,7 @@ export default function ToothNode({
 
   const axisGroup = useRef()
   const movable = useRef()
+  const transformRef = useRef()
   const inited = useRef(false)
 
   const [ready, setReady] = useState(false)
@@ -108,6 +109,15 @@ export default function ToothNode({
   const axes = selected ? <axesHelper args={[12]} /> : null
   const canEdit = editMode && selected && ready
 
+  useEffect(() => {
+    if (!transformRef.current || !movable.current) return
+    if (canEdit) {
+      transformRef.current.attach(movable.current)
+    } else {
+      transformRef.current.detach()
+    }
+  }, [canEdit])
+
   return (
     <group>
       <primitive object={ghostScene} />
@@ -118,20 +128,16 @@ export default function ToothNode({
 
         {canEdit ? (
           <TransformControls
+            ref={transformRef}
             mode={transformMode}
             space="local"
             onMouseDown={onEditDragStart}
             onMouseUp={onEditDragEnd}
-          >
-            <group ref={movable}>
-              <group onPointerDown={handlePointerDown}>{ready ? <primitive object={dynScene} /> : null}</group>
-            </group>
-          </TransformControls>
-        ) : (
-          <group ref={movable}>
-            <group onPointerDown={handlePointerDown}>{ready ? <primitive object={dynScene} /> : null}</group>
-          </group>
-        )}
+          />
+        ) : null}
+        <group ref={movable}>
+          <group onPointerDown={handlePointerDown}>{ready ? <primitive object={dynScene} /> : null}</group>
+        </group>
       </group>
     </group>
   )
