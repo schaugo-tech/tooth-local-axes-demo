@@ -12,7 +12,7 @@ function buildToothIds() {
   return ids
 }
 
-export default function ToothScene({ editMode }) {
+export default function ToothScene({ editMode, transformMode }) {
   const [coordMap, setCoordMap] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [isDraggingGizmo, setIsDraggingGizmo] = useState(false)
@@ -47,13 +47,14 @@ export default function ToothScene({ editMode }) {
     <group onPointerMissed={handlePointerMissed}>
       {toothIds.map((id) => (
         <ToothNode
-		  key={id}
+          key={id}
           toothId={id}
           glbUrl={`/models/tooth_${id}.glb`}
           axisDef={axisDefFor(id)}
           selected={selectedId === id}
           onSelect={() => setSelectedId(id)}
           editMode={editMode}
+          transformMode={transformMode}
           onEditDragStart={() => setIsDraggingGizmo(true)}
           onEditDragEnd={() => setIsDraggingGizmo(false)}
         />

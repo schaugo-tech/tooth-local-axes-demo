@@ -5,6 +5,7 @@ import ToothScene from './scene/ToothScene.jsx'
 
 export default function App() {
   const [editMode, setEditMode] = useState(false)
+  const [transformMode, setTransformMode] = useState('translate')
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -22,6 +23,38 @@ export default function App() {
         >
           {editMode ? '退出目标位调整' : '调整牙齿目标位'}
         </button>
+        {editMode ? (
+          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setTransformMode('translate')}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.08)',
+                background:
+                  transformMode === 'translate' ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)',
+                color: transformMode === 'translate' ? '#ffffff' : '#222222',
+                cursor: 'pointer'
+              }}
+            >
+              平移
+            </button>
+            <button
+              onClick={() => setTransformMode('rotate')}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.08)',
+                background:
+                  transformMode === 'rotate' ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)',
+                color: transformMode === 'rotate' ? '#ffffff' : '#222222',
+                cursor: 'pointer'
+              }}
+            >
+              旋转
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <Canvas
@@ -38,7 +71,7 @@ export default function App() {
 
         {!editMode ? <ArcballControls makeDefault /> : null}
 
-        <ToothScene editMode={editMode} />
+        <ToothScene editMode={editMode} transformMode={transformMode} />
       </Canvas>
     </div>
   )
