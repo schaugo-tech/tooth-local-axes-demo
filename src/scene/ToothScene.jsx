@@ -12,7 +12,7 @@ function buildToothIds() {
   return ids
 }
 
-export default function ToothScene() {
+export default function ToothScene({ editMode }) {
   const [coordMap, setCoordMap] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [isDraggingGizmo, setIsDraggingGizmo] = useState(false)
@@ -20,8 +20,8 @@ export default function ToothScene() {
 
   useEffect(() => {
     if (!controls) return
-    controls.enabled = !isDraggingGizmo
-  }, [controls, isDraggingGizmo])
+    controls.enabled = !(editMode || isDraggingGizmo)
+  }, [controls, editMode, isDraggingGizmo])
 
   useEffect(() => {
     loadCoordStep0('/CoordStep0.txt').then(setCoordMap).catch((e) => {
@@ -38,7 +38,7 @@ export default function ToothScene() {
   }
 
   const handlePointerMissed = (e) => {
-    if (isDraggingGizmo) return
+    if (editMode || isDraggingGizmo) return
     if (e?.button !== 0) return
     setSelectedId(null)
   }

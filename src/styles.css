@@ -3,5 +3,11 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #f7f9ff;
+}
+
+/* 屏幕空间渐变 + 轻微暗角（不随相机变化） */
+body {
+  background:
+    radial-gradient(1200px 800px at 30% 20%, #ffffff 0%, #f3f6ff 45%, #eef2fb 100%),
+    radial-gradient(1200px 800px at 70% 80%, rgba(20, 30, 60, 0.06) 0%, rgba(20, 30, 60, 0.0) 55%, rgba(20, 30, 60, 0.04) 100%);
 }
