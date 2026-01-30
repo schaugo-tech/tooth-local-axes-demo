@@ -4,7 +4,6 @@ import ToothNode from './ToothNode.jsx'
 import { loadCoordStep0 } from '../utils/parseCoordStep.js'
 
 function buildToothIds() {
-  // Default: 28 teeth 11-17,21-27,31-37,41-47
   const ids = []
   for (let t = 11; t <= 17; t++) ids.push(String(t))
   for (let t = 21; t <= 27; t++) ids.push(String(t))
@@ -16,13 +15,13 @@ function buildToothIds() {
 export default function ToothScene() {
   const [coordMap, setCoordMap] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
+  const [isDraggingGizmo, setIsDraggingGizmo] = useState(false)
   const { controls } = useThree()
 
-  // Allow disabling Arcball while dragging gizmo
-  const setOrbitEnabled = (enabled) => {
+  useEffect(() => {
     if (!controls) return
-    controls.enabled = !!enabled
-  }
+    controls.enabled = !isDraggingGizmo
+  }, [controls, isDraggingGizmo])
 
   useEffect(() => {
     loadCoordStep0('/CoordStep0.txt').then(setCoordMap).catch((e) => {
@@ -35,13 +34,14 @@ export default function ToothScene() {
 
   const axisDefFor = (toothId) => {
     if (!coordMap) return null
-    const v = coordMap.get(toothId)
-    if (!v) return null
-    return v
+    return coordMap.get(toothId) ?? null
   }
 
-  // Click empty space to clear selection
-  const handlePointerMissed = () => setSelectedId(null)
+  const handlePointerMissed = (e) => {
+    if (isDraggingGizmo) return
+    if (e?.button !== 0) return
+    setSelectedId(null)
+  }
 
   return (
     <group onPointerMissed={handlePointerMissed}>
@@ -53,7 +53,8 @@ export default function ToothScene() {
           axisDef={axisDefFor(id)}
           selected={selectedId === id}
           onSelect={() => setSelectedId(id)}
-          setOrbitEnabled={setOrbitEnabled}
+          onGizmoDragStart={() => setIsDraggingGizmo(true)}
+          onGizmoDragEnd={() => setIsDraggingGizmo(false)}
         />
       ))}
     </group>
