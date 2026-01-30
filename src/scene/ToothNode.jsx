@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { computeMovableLocalFromWorld, decomposeMatrix } from '../utils/localFrame.js'
-import AxisLines from './AxisLines.jsx'
 
 export default function ToothNode({
   toothId,
@@ -16,12 +14,10 @@ export default function ToothNode({
   onEditDragEnd
 }) {
   const { scene } = useGLTF(glbUrl)
-  const { camera } = useThree()
 
   const axisGroup = useRef()
   const movable = useRef()
   const inited = useRef(false)
-
   const [ready, setReady] = useState(false)
 
   const ghostScene = useMemo(() => scene.clone(true), [scene])
@@ -65,8 +61,11 @@ export default function ToothNode({
   useEffect(() => {
     if (!axisGroup.current) return
     if (!axisDef) return
+
     const { pos, quat } = axisDef
     axisGroup.current.position.set(pos[0], pos[1], pos[2])
+
+    // IMPORTANT: quat is already "frame in world" (xyzw), do NOT invert
     axisGroup.current.quaternion.set(quat[0], quat[1], quat[2], quat[3]).normalize()
     axisGroup.current.updateMatrixWorld(true)
   }, [axisDef])
@@ -78,9 +77,8 @@ export default function ToothNode({
 
     axisGroup.current.updateMatrixWorld(true)
 
-    // 让 axisGroup “只定义局部坐标系，不改变牙齿初始外观”
-    // tooth_world 视作单位（因为 glb 已在 world 正确位置，且我们不把 glb 的 world transform 复制过来）
-    // 于是 movable_local = inv(axis_world) * I
+    // Make axisGroup "define local axes but not change initial appearance":
+    // axis_world * movable_local = I  => movable_local = inv(axis_world)
     const toothWorld = new THREE.Matrix4().identity()
     const axisWorld = axisGroup.current.matrixWorld.clone()
 
@@ -109,14 +107,13 @@ export default function ToothNode({
     startQuat: new THREE.Quaternion()
   })
 
-  const handlePointerDown = (e) => {
+  const onDown = (e) => {
     e.stopPropagation()
     onSelect?.()
 
     if (!editMode) return
     if (!movable.current) return
 
-    // 强制抓住 pointer，避免拖拽过程中事件跑到 Arcball 或其它对象上
     e.target.setPointerCapture(e.pointerId)
 
     drag.current.active = true
@@ -128,7 +125,7 @@ export default function ToothNode({
     onEditDragStart?.()
   }
 
-  const handlePointerMove = (e) => {
+  const onMove = (e) => {
     if (!editMode) return
     if (!drag.current.active) return
     if (drag.current.pointerId !== e.pointerId) return
@@ -137,27 +134,25 @@ export default function ToothNode({
     const dx = e.pointer.x - drag.current.startNdc.x
     const dy = e.pointer.y - drag.current.startNdc.y
 
-    // orthographic 下，NDC 位移映射到局部位移很稳定；scale 只是手感系数
-    // 你觉得“太灵敏/太钝”就改这个
+    // Hand-feel coefficient for orthographic + NDC
     const scale = 25.0
 
     if (e.altKey) {
-      // Alt + 拖动：绕局部 Z 旋转（先做一个最常用的；要扩展到 X/Y/Z 很容易）
+      // Alt + drag: rotate around local Z
       const angle = dx * 2.2
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle)
       movable.current.quaternion.copy(drag.current.startQuat).multiply(q)
       return
     }
 
-    // 普通拖动：沿局部 X/Y 平移（因为我们改的是 movable.localPosition）
+    // Drag: translate in local X/Y
     const localDelta = new THREE.Vector3(dx * scale, -dy * scale, 0)
     movable.current.position.copy(drag.current.startPos).add(localDelta)
   }
 
-  const handlePointerUp = (e) => {
+  const onUp = (e) => {
     if (!editMode) return
     if (drag.current.pointerId !== e.pointerId) return
-
     drag.current.active = false
     drag.current.pointerId = null
     onEditDragEnd?.()
@@ -171,14 +166,8 @@ export default function ToothNode({
 
       <group ref={axisGroup}>
         {axes}
-		{toothId === '11' ? <AxisLines length={60} /> : null}
-
         <group ref={movable}>
-          <group
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-          >
+          <group onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
             {ready ? <primitive object={dynScene} /> : null}
           </group>
         </group>

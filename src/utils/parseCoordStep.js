@@ -1,12 +1,8 @@
 // src/utils/parseCoordStep.js
 import * as THREE from 'three'
 
-// CoordStep0.txt expected columns per line (space/tab separated):
-// toothId  px py pz  qw qx qy qz
-// - This is the "frame in world" quaternion in WXYZ order, per your EX_Tools.
-// - In three.js, Object3D.quaternion represents object orientation in world.
-//   To represent a "local frame", we must use the INVERSE of the frame quaternion.
-
+// CoordStep0.txt format per EX_Tools:
+// toothId  px py pz  qw qx qy qz   (wxyz)
 export async function loadCoordStep0(url = '/CoordStep0.txt') {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`)
@@ -25,7 +21,6 @@ export async function loadCoordStep0(url = '/CoordStep0.txt') {
     if (parts.length < 8) continue
 
     const toothId = String(parts[0])
-
     const px = Number(parts[1])
     const py = Number(parts[2])
     const pz = Number(parts[3])
@@ -37,17 +32,13 @@ export async function loadCoordStep0(url = '/CoordStep0.txt') {
 
     if (![px, py, pz, qw, qx, qy, qz].every(Number.isFinite)) continue
 
-    // q_frame is given as WXYZ (Open3D / your EX_Tools)
+    // EX_Tools: q is wxyz, and represents "frame orientation in world"
     const qFrame = new THREE.Quaternion(qx, qy, qz, qw).normalize()
-
-    // Convert frame quaternion to three.js object quaternion: inverse(frame)
-    const qObj = qFrame.clone().invert()
 
     map.set(toothId, {
       pos: [px, py, pz],
-      // three.js order: [x,y,z,w], already inverted and ready to apply to Object3D.quaternion
-      quat: [qObj.x, qObj.y, qObj.z, qObj.w],
-      // keep original for debugging/verification
+      // three.js expects xyzw
+      quat: [qFrame.x, qFrame.y, qFrame.z, qFrame.w],
       frameWxyz: [qw, qx, qy, qz]
     })
   }
