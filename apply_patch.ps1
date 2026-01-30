@@ -100,7 +100,7 @@ export default function App() {
 }
 "@
 
-Write-FileUtf8NoBom (Join-Path $root "src\scene\Background.jsx") @"
+Write-FileUtf8NoBom (Join-Path $root "src\scene\Background.jsx") @'
 import { useMemo } from 'react'
 import * as THREE from 'three'
 
@@ -142,7 +142,7 @@ export default function Background() {
     </mesh>
   )
 }
-"@
+'@
 
 Write-FileUtf8NoBom (Join-Path $root "src\utils\parseCoordStep.js") @'
 // parseCoordStep.js
