@@ -1,0 +1,1091 @@
+<!doctype html>
+<!-- build: 2025-10-29-1450 stlViewer theme refresh -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CoMotion</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: rgba(18, 18, 20, 0.9);
+    --text: #ffffff;
+    --muted: #9ca3af;
+    --accent: #ffcc00;
+  }
+  #title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,"PingFang SC","Microsoft Yahei",Segoe UI,Roboto,Helvetica,Arial}
+  #app{
+  position:fixed;
+  inset:0;
+  display:grid;
+  grid-template-columns:380px 1fr;
+  grid-template-rows:100%;
+  }
+  /* 小屏（例如 <=768px）下，改成上下堆叠：左边面板占上半，画布占下半 */
+  @media(max-width:768px){
+  #app{
+  grid-template-columns:100%;
+  grid-template-rows:auto 1fr;
+  }
+  #left{
+  max-height:40vh;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  }
+  }
+  #left{background:var(--panel);backdrop-filter:blur(6px);padding:10px 10px 14px;overflow:auto}
+  #titlebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  #helpBtn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.2;
+  }
+  #helpBtn:hover {
+  background: rgba(255,255,255,0.06);
+  }
+  .muted{color:var(--muted);font-size:12px}
+  .row{margin-top:8px}
+  input,
+  select,
+  button {
+  background: #1c1d20;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 13px;
+  line-height: 1.2;
+  }
+  
+  input::placeholder {
+  color: var(--muted);
+  opacity: .7;
+  font-size: 12px;
+  }
+  .navBtn {
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+  display: inline-block;
+  }
+  .navBtn:hover {
+  background: rgba(255,255,255,0.06);
+  }  
+  button.primary {
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  border: 0;
+  box-shadow: 0 10px 24px rgba(255,204,0,0.4);
+  }
+  button.primary:hover {
+  box-shadow: 0 14px 32px rgba(255,204,0,0.5);
+  }
+  input[type="color"]{padding:0;width:30px;height:24px;border-radius:6px}
+  input[type="range"] {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  }
+  button{cursor:pointer}
+  #canvas{width:100%;height:100%;display:block}
+  .hr{height:1px;background:#2a2f35;margin:10px 0}
+  /* 紧凑部件卡片：减小内边距、字体、控件间距 */
+  .part{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-top:6px;padding:6px;border:1px solid #2a2f35;border-radius:10px}
+  .name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .line{display:flex;align-items:center;gap:6px;margin-top:4px}
+  .line select{height:28px;padding:2px 6px}
+  .line button{height:28px;padding:2px 8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .container {
+      display: flex;
+      align-items: left;
+	  gap: 30px;
+  }
+  .color-container {
+      display: flex;
+      align-items: center;
+  }
+  .fit {
+      margin-left: auto;
+      padding: 4px 8px;
+      background: #2a2f35;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+  }  
+  label{display:flex;align-items:center;gap:8px}
+
+  /* 帮助模态整体样式 */
+  #help {
+    display: none;               /* 默认隐藏，点击按钮再显示 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5); /* 半透明遮罩 */
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* 内容框 */
+  #help .box {
+    background: #fff;
+    color: #333;
+    max-width: 480px;
+    padding: 20px 28px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    text-align: left;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  /* 标题与段落 */
+  #help h3 {
+    margin-top: 0;
+    color: #222;
+    font-size: 1.2em;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+  }
+  #help p {
+    margin: 10px 0;
+    white-space: normal;
+  }
+
+  /* 关闭按钮 */
+  #help .close {
+    text-align: right;
+    margin-top: 16px;
+  }
+  #help .close button {
+    padding: 6px 12px;
+    background: #0078d7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #help .close button:hover {
+    background: #005ea0;
+  }
+  
+  /* 右下角 12 面骰子画布 */
+  #diceCanvas{
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    width: 120px;   /* 想更大/更小改这里 */
+    height: 120px;
+    pointer-events: auto;
+    background: rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.2) inset, 0 2px 6px rgba(0,0,0,.2);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="left">
+    <div id="titlebar">
+      <div id="title">CoMotion</div>
+      <div style="display:flex;gap:6px">
+        <a href="/" id="homeBtn" class="navBtn">返回首页</a>
+        <button id="helpBtn">帮助</button>
+      </div>
+    </div>
+    <div class="muted">输入密钥，加载对应模型。</div>
+
+    <!-- 子文件夹选择：只有输入与 assets/<name>/manifest.json 匹配时才加载 -->
+    <div class="row">
+      <label style="justify-content:space-between;gap:10px">
+        <span>密钥</span>
+        <input id="folderKey" value="Demo" placeholder="请输入项目名称" style="flex:1" />
+        <button id="btnLoadFolder" class="primary">加载</button>
+      </label>
+    </div>
+    <div class="row grid2">
+      <label><input type="checkbox" id="autoFit" checked> 自动适配</label>
+      <label><input type="checkbox" id="showAxes" checked> 轴向辅助</label>
+    </div>
+    <div class="row grid2">
+      <button id="btnFit">适配可见</button>
+      <button id="btnShot">截图PNG</button>
+    </div>
+    <div class="row">
+      <label>亮度调整
+        <input type="range" id="lightIntensity" min="0" max="10" step="0.01" value="0.9">
+      </label>
+    </div>
+    <div class="hr"></div>
+    <div id="parts"></div>
+  </div>
+  <canvas id="canvas"></canvas>
+</div>
+
+<!-- 简易帮助模态 -->
+<div id="help">
+  <div class="box">
+    <h3>使用说明</h3>
+    <p>这目前状态还只是一个简易的三维模型查看器。使用步骤如下：</p>
+    <p>1️⃣ 在左上角的输入框中填入您获得的访问密钥（如 <code>case01</code>）。</p>
+    <p>2️⃣ 点击“加载”按钮后，系统会自动载入对应项目的三维模型。</p>
+    <p>3️⃣ 模型加载完成后，可通过左侧列表控制每个部件的显隐、颜色、透明度和渲染风格。</p>
+    <p>4️⃣ 可使用鼠标旋转、缩放、平移模型；也可点击“前视”“顶视”“等轴测”等固定视角。</p>
+    <p>5️⃣ 若需要截图，可点击“截图 PNG”。</p>
+    <p>⚙️ 如模型未显示，请确认输入的密钥与服务器上对应文件夹名称一致。</p>
+    <div class="close"><button id="helpClose">关闭</button></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": { "three": "./libs/three.module.js" }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './libs/OrbitControls.js';
+import { ArcballControls } from './controls/ArcballControls.js';
+import { STLLoader }     from './libs/STLLoader.js';
+import { RoomEnvironment } from './libs/RoomEnvironment.js';
+import { GLTFLoader } from './libs/GLTFLoader.js';
+import { ConvexGeometry } from './libs/ConvexGeometry.js';
+
+// --------- 基本场景（正交相机） ---------
+const canvas   = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, preserveDrawingBuffer:true });
+const w = window.innerWidth-320, h = window.innerHeight; const aspect=w/h; const base=1;
+const camera = new THREE.OrthographicCamera(-base*aspect, base*aspect, base, -base, -1e6, 1e6);
+function getCanvasSize() {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect.width));
+    const h = Math.max(1, Math.floor(rect.height));
+    return { w, h };
+}
+camera.position.set(2,2,2); 
+function resizeMainRenderer() {
+    const { w, h } = getCanvasSize();
+    renderer.setSize(w, h, false);
+
+    const aspect = w / h;
+    const half = 1; // 初始盒子，后面fitOrthoToVisible会根据实际模型再细调
+    camera.left   = -half * aspect;
+    camera.right  =  half * aspect;
+    camera.top    =  half;
+    camera.bottom = -half;
+    camera.updateProjectionMatrix();
+}
+
+
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+resizeMainRenderer();
+
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.physicallyCorrectLights = true;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// const controls = new OrbitControls(camera, renderer.domElement);
+// const controls = new ArcballControls(camera, renderer.domElement, scene);
+// controls.enableAnimations = true;     // 轻微动画过渡，手感更顺
+// controls.dampingFactor    = 0.10;     // 阻尼
+// controls.setGizmosVisible(false);     // 不要右下角内置手柄
+
+let controls;
+function reinitControls() {
+    if (controls && controls.dispose) {
+        controls.dispose();
+    }
+
+    // 注意：ArcballControls 的第三个参数你之前传 scene，有的实现需要 scene 来画小gizmo
+    // 如果你的 ArcballControls 构造签名不同，请保持跟你原先文件一致的参数顺序
+    controls = new ArcballControls(camera, renderer.domElement, scene);
+
+    // 关掉它的平滑动画/自动插值。我们要纯手感，不要智能摇头
+    controls.enableAnimations = false;
+
+    // 把阻尼设成比较温的值，让拖动不至于太肉，也不会飞
+    controls.dampingFactor = 0.1;
+
+    // 不需要那种内置的可视化小坐标轴gizmo（如果你原本有 setGizmosVisible）
+    if (typeof controls.setGizmosVisible === 'function') {
+        controls.setGizmosVisible(false);
+    }
+
+    // 默认允许自由旋转、缩放、平移
+    controls.enablePan      = true;
+    controls.enableZoom     = true;
+    controls.enableRotate   = true;
+
+    // 非常重要：允许完全自由翻转，包括 roll
+    // 部分 ArcballControls 版本有这些限制标志，比如:
+    // controls.enablePan = true;       // 你已经有
+    // controls.enableRotate = true;    // 你已经有
+    // controls.useAltKeys = false;     // 如果你的实现有奇怪的辅助键才允许旋转，可以关掉
+    // 这里我们不强行约束“上方向”，ArcballControls 会允许任意四元数旋转，这就是连续翻转
+
+    controls.update();
+}
+reinitControls();
+
+// controls.enableDamping = true; controls.dampingFactor = 0.08;
+// controls.enableRotate = true;
+// controls.enableZoom = true;
+// controls.enablePan = true;
+// controls.screenSpacePanning = true;
+// controls.autoRotate = false;       // 默认关闭
+// controls.autoRotateSpeed = 1.2;    // 想要的时候把 autoRotate 设为 true 即可
+
+// controls.minAzimuthAngle = -Infinity;
+// controls.maxAzimuthAngle =  Infinity;
+// controls.minPolarAngle   =  0.0;       
+// controls.maxPolarAngle   =  Math.PI;
+
+const SNAP_NEAR = 0.03;   // 接近阈值（弧度），调大更容易吸附
+const sTmp = new THREE.Spherical();
+const vTmp = new THREE.Vector3();
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 0.9); scene.add(hemi);
+// 现有 hemi + dir 保留，再加一盏淡环境光抬底
+const amb = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(amb);
+
+const dir  = new THREE.DirectionalLight(0xffffff, 1.0); dir.position.set(5,8,5); dir.castShadow = true; scene.add(dir);
+const axes = new THREE.AxesHelper(0.1); axes.visible = true; scene.add(axes);
+
+// --------- 状态与工具 ---------
+const registry = new Map(); let nextId = 1;
+const stlLoader = new STLLoader();
+
+function unionVisibleBox(){ const box=new THREE.Box3(); let has=false; registry.forEach(e=>{ if(!e.meshGroup.visible) return; const b=new THREE.Box3().setFromObject(e.meshGroup); if(!b.isEmpty()){ has=true; if(box.isEmpty()) box.copy(b); else box.union(b);} }); return {box,has}; }
+
+function fitOrthoToVisible(margin = 1.2) {
+    const {box,has} = unionVisibleBox();
+    if(!has){
+        const { w, h } = getCanvasSize();
+        const aspect = w / h;
+        const half = 1;
+        camera.left   = -half * aspect;
+        camera.right  =  half * aspect;
+        camera.top    =  half;
+        camera.bottom = -half;
+        camera.updateProjectionMatrix();
+        return;
+    }
+
+    // 模型包围盒尺寸
+    const size   = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    // half 是我们希望正交相机在“竖向”方向上能看到的半边长度
+    const half = (maxDim * margin) / 2;
+
+    // 用真实canvas比例，而不是window的假定比例
+    const { w, h } = getCanvasSize();
+    const aspect = w / h;
+
+    camera.left   = -half * aspect;
+    camera.right  =  half * aspect;
+    camera.top    =  half;
+    camera.bottom = -half;
+    camera.updateProjectionMatrix();
+}
+
+// function snapView(kind){ const {box,has}=unionVisibleBox(); const center=has?box.getCenter(new THREE.Vector3()):new THREE.Vector3(); const size=has?box.getSize(new THREE.Vector3()):new THREE.Vector3(1,1,1); const maxDim=Math.max(size.x,size.y,size.z); const dist=maxDim*2.0; const dirs={front:new THREE.Vector3(0,0,1),back:new THREE.Vector3(0,0,-1),left:new THREE.Vector3(-1,0,0),right:new THREE.Vector3(1,0,0),top:new THREE.Vector3(0,1,0),bottom:new THREE.Vector3(0,-1,0),iso:new THREE.Vector3(1,1,1).normalize()}; const dirv=dirs[kind]||dirs.iso; camera.position.copy(center).addScaledVector(dirv,dist); camera.up.set(0,1,0); controls.target.copy(center); fitOrthoToVisible(1.1); console.log('[fit] after ', camera.position.x.toFixed(3), camera.position.y.toFixed(3), camera.position.z.toFixed(3));}
+
+function getSceneFitInfo() {
+    const { box, has } = unionVisibleBox();
+
+    if (!has || box.isEmpty()) {
+        const fallbackCenter = new THREE.Vector3(0, 0, 0);
+        const fallbackDist   = 2.0;
+        return {
+            center: fallbackCenter,
+            dist: fallbackDist
+        };
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+
+    const radius = Math.max(size.x, size.y, size.z) * 0.5;
+    const dist   = radius * 2.0;
+
+    return { center, dist };
+}
+
+function syncControlsToCameraAndCenter(centerVec3) {
+    // centerVec3: 我们认定的“旋转中心”，也就是当前牙模的包围盒中心
+    // 作用：把 ArcballControls 的内部状态重置成
+    // “现在camera和这个center是一对新的起点，不要再沿旧轴弹回”。
+
+    // 保守：如果没给，就自动算
+    let pivot = centerVec3;
+    if (!pivot) {
+        const { center } = getSceneFitInfo();
+        pivot = center;
+    }
+
+    // 保证我们关闭自动动画
+    controls.enableAnimations = false;
+    controls.dampingFactor    = 0.1;
+
+    // 方案A：新版 ArcballControls，带 setLookAt()
+    if (typeof controls.setLookAt === 'function') {
+        // 用 camera 的当前位置当 eye
+        const eyeX = camera.position.x;
+        const eyeY = camera.position.y;
+        const eyeZ = camera.position.z;
+
+        controls.setLookAt(
+            eyeX, eyeY, eyeZ,
+            pivot.x, pivot.y, pivot.z,
+            false // 不要过渡动画
+        );
+    } else {
+        // 方案B：旧版 ArcballControls
+        if (controls.target) {
+            controls.target.copy(pivot);
+        }
+        // 让控制器内部把它当作新的基准
+        controls.update();
+    }
+
+    // 再保险一次，保持“不要自己再转回来”
+    controls.enableAnimations = false;
+    controls.dampingFactor    = 0.1;
+    controls.update();
+}
+
+function snapByDirection(dir /* THREE.Vector3, 单位方向，比如 (0,1,0) 等 */) {
+    const { center, dist } = getSceneFitInfo();
+
+    // eye = center + dir * dist
+    const eye = new THREE.Vector3()
+        .copy(center)
+        .addScaledVector(dir, dist);
+
+    // 相机放到指定视角
+    camera.position.copy(eye);
+
+    // 为了让顶视 / 底视不倒头，我们可以按方向调一下 up
+    if (Math.abs(dir.y) > 0.9) {
+        camera.up.set(0, 0, 1);
+    } else {
+        camera.up.set(0, 1, 0);
+    }
+
+    camera.lookAt(center);
+    camera.updateMatrixWorld(true);
+
+    // 更新正交视体，保证视野里刚好装下牙模
+    fitOrthoToVisible(1.1);
+
+    // 关键：把这个新姿态告知 ArcballControls，
+    // 让它把这姿态当成“初始状态”，后续拖动就围绕 center 自由四元数旋转，
+    // 而不是绕它旧的那条历史轴。
+    syncControlsToCameraAndCenter(center);
+
+    /*
+	console.log('[snapByDirection] jumped view:', {
+        eye: eye.toArray().map(v => v.toFixed(3)),
+        center: center.toArray().map(v => v.toFixed(3)),
+        dist: dist.toFixed(3),
+        dir: dir.toArray().map(v => v.toFixed(3)),
+        dampingFactor: controls.dampingFactor,
+        enableAnimations: controls.enableAnimations
+    });
+	*/
+}
+
+
+function initViewAfterLoad() {
+    const { center, dist } = getSceneFitInfo();
+
+    // 初始就给一个舒服的等轴测方向，比如 (1,1,1)
+    const dir = new THREE.Vector3(1, 1, 1).normalize();
+    const eye = new THREE.Vector3().copy(center).addScaledVector(dir, dist);
+
+    // 相机放到 eye，看向 center
+    camera.position.copy(eye);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(center);
+    camera.updateMatrixWorld(true);
+
+    // 把正交相机的投影盒子适配一下
+    fitOrthoToVisible(1.15);
+
+    // 最重要的一步：让 ArcballControls 把“现在这个 eye→center”当作新的基准，
+    // 不要记住之前那个乱七八糟的球心/半径。
+    syncControlsToCameraAndCenter(center);
+}
+
+function snapView(kind){
+  const dirs={
+    front:new THREE.Vector3(0,0,1),
+    back:new THREE.Vector3(0,0,-1),
+    left:new THREE.Vector3(-1,0,0),
+    right:new THREE.Vector3(1,0,0),
+    top:new THREE.Vector3(0,1,0),
+    bottom:new THREE.Vector3(0,-1,0),
+    iso:new THREE.Vector3(1,1,1).normalize()
+  };
+  const dirv=dirs[kind]||dirs.iso;
+  snapByDirection(dirv);
+}
+
+
+function createMaterial(kind, color='#cccccc', rough=0.45, metal=0.0, opacity=1.0){ const c=new THREE.Color(color); const common={ transparent:opacity<1, opacity, depthTest:true, depthWrite:opacity>=1, side:THREE.DoubleSide }; switch(kind){ case 'Phong': return new THREE.MeshPhongMaterial({ color:c, shininess:30, specular:0x222222, ...common }); case 'Toon': return new THREE.MeshToonMaterial({ color:c, ...common }); case 'Basic': return new THREE.MeshBasicMaterial({ color:c, ...common }); case 'Wireframe': return new THREE.MeshBasicMaterial({ color:c, wireframe:true, ...common }); case 'Physical': return new THREE.MeshPhysicalMaterial({ color:c, roughness:rough, metalness:metal, transmission:1-opacity, ior:1.5, clearcoat:0.2, ...common }); case 'Matcap': { const tex=new THREE.TextureLoader().load('./assets/matcap.jpg'); return new THREE.MeshMatcapMaterial({ matcap:tex, color:c, ...common }); } case 'Outline': return new THREE.MeshStandardMaterial({ color:c, roughness:rough, metalness:metal, ...common }); default: return new THREE.MeshStandardMaterial({ color:c, roughness:rough, metalness:metal, envMapIntensity:1.0, ...common }); } }
+function ensureOutlineShell(group, geometry, color){ let outline=null; group.children.forEach(ch=>{ if(ch.isMesh && ch.material && ch.material.side===THREE.BackSide) outline=ch; }); if(!outline){ const edgeColor=(color? new THREE.Color(color).multiplyScalar(0.2): new THREE.Color(0x000000)); outline=new THREE.Mesh(geometry.clone(), new THREE.MeshBasicMaterial({ color:edgeColor, side:THREE.BackSide, transparent:false, opacity:1 })); outline.name='__outline__'; outline.scale.multiplyScalar(1.01); group.add(outline); } }
+
+function removeOutlineShell(group){ for(let i=group.children.length-1;i>=0;i--){ const ch=group.children[i]; if(ch.isMesh && ch.material && ch.material.side===THREE.BackSide && ch.name==='__outline__'){ ch.geometry.dispose(); ch.material.dispose(); group.remove(ch);} } }
+
+// function applyStyleToGroup(group, style, color, rough, metal, opacity){ group.traverse(o=>{ if(o.isMesh && !(o.material && o.material.side===THREE.BackSide)){ const mat=createMaterial(style==='Outline'?'Outline':style, color, rough, metal, opacity); if(o.material) o.material.dispose(); o.material=mat; }}); if(style==='Outline'){ const inner=group.children.find(ch=>ch.isMesh && !(ch.material && ch.material.side===THREE.BackSide)); if(inner) ensureOutlineShell(group, inner.geometry, color); } else removeOutlineShell(group); }
+
+/*
+function makeFaceLabelTexture(label) {
+    // 用 <canvas> 动态画文字，转成纹理
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // 背景
+    ctx.fillStyle = '#222'; // 深色底，别太花
+    ctx.fillRect(0, 0, size, size);
+
+    // 边框
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(16, 16, size - 32, size - 32);
+
+    // 文字
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 50px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, size / 2, size / 2);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    return tex;
+}
+*/
+
+function makeFaceLabelTexture(label) {
+    const size = 256;
+    const r = size / 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // ===== 背景：做一个径向渐变，让中间微亮、边缘微暗，像一块微微打光的塑料/亚克力面 =====
+    const gradBg = ctx.createRadialGradient(
+        r, r, r * 0.2,   // 内圈中心，半径小
+        r, r, r          // 外圈中心，半径大
+    );
+    gradBg.addColorStop(0.0, '#2f2f32'); // 中心稍亮一点的深灰
+    gradBg.addColorStop(1.0, '#1a1a1d'); // 边缘更暗一点，收住
+
+    ctx.fillStyle = gradBg;
+    ctx.fillRect(0, 0, size, size);
+
+    // ===== 边框：使用圆角矩形 + 轻微的双层描边，显得更像UI组件而不是debug框 =====
+    const inset = 20;
+    const radius = 28;
+
+    // 先画半透明外高光描边（偏亮）
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    roundedRect(ctx, inset, inset, size - inset*2, size - inset*2, radius);
+    ctx.stroke();
+
+    // 再画一层内描边（偏暗），模拟厚度
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    roundedRect(ctx, inset+2, inset+2, size - (inset+2)*2, size - (inset+2)*2, radius-8);
+    ctx.stroke();
+
+    // ===== 文本：半粗体 + 间距 + 轻微发光，让字有悬浮感 =====
+    // 字体
+    ctx.font = '600 38px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // 发光 / 外描边
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+
+    // 为了更“面板化”，字母稍微拉开一点间距（Canvas没直接的 letter-spacing，所以手动画）
+    drawSpacedText(ctx, label.toUpperCase(), r, r, 8);
+
+    // 生成纹理
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    return tex;
+
+    // === 内部小函数：画圆角矩形 ===
+    function roundedRect(ctx, x, y, w, h, rad) {
+        const r2 = Math.min(rad, w * 0.5, h * 0.5);
+        ctx.beginPath();
+        ctx.moveTo(x + r2, y);
+        ctx.lineTo(x + w - r2, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r2);
+        ctx.lineTo(x + w, y + h - r2);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r2, y + h);
+        ctx.lineTo(x + r2, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r2);
+        ctx.lineTo(x, y + r2);
+        ctx.quadraticCurveTo(x, y, x + r2, y);
+        ctx.closePath();
+    }
+
+    // === 内部小函数：手动实现“字距” ===
+    function drawSpacedText(ctx, text, cx, cy, spacingPx) {
+        // 先测整段宽度
+        const metrics = ctx.measureText(text);
+        // 近似字宽（注意这个是简化，够用了）
+        const avgCharWidth = metrics.width / text.length;
+
+        // 我们计算整段额外总间距
+        const extraTotal = spacingPx * (text.length - 1);
+
+        // 整体宽度 = 原本宽度 + 额外间距
+        const totalWidth = metrics.width + extraTotal;
+
+        // 从左起始点
+        let x = cx - totalWidth / 2 + avgCharWidth / 2;
+
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            ctx.fillText(ch, x, cy);
+            x += avgCharWidth + spacingPx;
+        }
+    }
+}
+
+function createLabeledDice(size = 1.0) {
+    const diceGroup = new THREE.Group();
+
+    const half = size / 2;
+
+    // 我们做6个面，每个是一个平面 + 文字材质
+    // 每个面还需要一个背板（立方体外形），你可以保持你现在已有的 cube 几何当外壳
+    // 这里只演示标签平面
+
+    const faces = [
+        { label: 'TOP', dir: new THREE.Vector3( 0,  0,  1), rot: [0,0,0] },
+        { label: 'BOTTOM',  dir: new THREE.Vector3( 0,  0, -1), rot: [0,Math.PI,0] },
+        { label: 'RIGHT',  dir: new THREE.Vector3( 1,  0,  0), rot: [0,Math.PI/2,0] },
+        { label: 'LEFT', dir: new THREE.Vector3(-1,  0,  0), rot: [0,-Math.PI/2,0] },
+        { label: 'BACK',   dir: new THREE.Vector3( 0,  1,  0), rot: [-Math.PI/2,0,0] },
+        { label: 'FRONT',dir: new THREE.Vector3( 0, -1,  0), rot: [ Math.PI/2,0,0] },
+    ];
+
+    const planeGeom = new THREE.PlaneGeometry(size, size);
+
+    faces.forEach(f => {
+        const mat = new THREE.MeshBasicMaterial({
+            map: makeFaceLabelTexture(f.label),
+            transparent: false,
+        });
+        const plane = new THREE.Mesh(planeGeom, mat);
+
+        // 把平面放到该朝向的外侧
+        plane.position.copy(f.dir).multiplyScalar(half + 0.001); // 0.001: 防Z冲突
+        plane.rotation.set(f.rot[0], f.rot[1], f.rot[2]);
+
+        // 给交互 / raycaster 用的信息：这个面代表哪个方向
+        plane.userData.viewDir = f.dir.clone().normalize();
+
+        diceGroup.add(plane);
+    });
+
+    // 你也可以在 diceGroup 里再加一个半透明的小立方体外壳，保持现在的视觉
+    const cubeGeom = new THREE.BoxGeometry(size, size, size);
+    const cubeMat = new THREE.MeshBasicMaterial({
+        wireframe: true,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.2
+    });
+    const wireCube = new THREE.Mesh(cubeGeom, cubeMat);
+    diceGroup.add(wireCube);
+
+    return diceGroup;
+}
+
+
+function applyStyleToGroup(group, style, color, rough, metal, opacity){
+  group.traverse(o=>{
+    if (o.isMesh && !(o.material && o.material.side === THREE.BackSide)) {
+      const mat = createMaterial(style === 'Outline' ? 'Outline' : style, color, rough, metal, opacity);
+      if (o.material) o.material.dispose();
+      o.material = mat;
+
+      // 给主体材质加轮廓高光，strength/power 可按口味微调
+      attachRimLighting(o.material, 0.65, 3.0);
+    }
+  });
+  if (style === 'Outline') {
+    const inner = group.children.find(ch => ch.isMesh && !(ch.material && ch.material.side === THREE.BackSide));
+    if (inner) ensureOutlineShell(group, inner.geometry, color);
+  } else removeOutlineShell(group);
+}
+
+// 基于视角的轮廓高光：在边缘处按 pow(rim, power) 提亮
+function attachRimLighting(mat, strength = 0.35, power = 2.0) {
+  if (!mat || !mat.onBeforeCompile) return;
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <output_fragment>', `
+        // 基于视线与法线夹角的轮廓强度
+        float rim = 1.0 - saturate(dot(normalize(vNormal), normalize(vViewPosition)));
+        vec3 rimCol = vec3(1.0) * pow(rim, ${power.toFixed(1)});
+        // 原片元颜色在 gl_FragColor 中，先执行原逻辑
+        #include <output_fragment>
+        // 再把轮廓光混进来
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb + rimCol, ${strength.toFixed(2)});
+      `);
+  };
+  mat.needsUpdate = true;
+}
+
+function mountPartUI(id){ const e=registry.get(id); const parts=document.getElementById('parts'); const el=document.createElement('div'); el.className='part'; el.dataset.id=id; el.innerHTML=`
+  <div><input type="checkbox" class="v" ${e.meshGroup.visible ? 'checked' : ''}></div>
+  
+  <div>
+    <div class="container">
+      <div class="name">${e.name} </div>
+      <div class="color-container">
+        <label>Colour</label>
+        <input type="color" class="col" value="${e.params.color}">
+      </div>
+      <button class="fit">FIT</button>
+    </div>
+    <div class="line">
+      <label>RenderStyle<select class="mat">
+        <option ${e.params.style==='Standard'?'selected':''}>Standard</option>
+        <option ${e.params.style==='Phong'?'selected':''}>Phong</option>
+        <option ${e.params.style==='Wireframe'?'selected':''}>Wireframe</option>
+        <option ${e.params.style==='Physical'?'selected':''}>Physical</option>
+        <option ${e.params.style==='Outline'?'selected':''}>Outline</option>
+      </select></label>
+    </div>
+    <div class="line">
+      <label>T<input type="range" class="opacity" min="0" max="1" step="0.01" value="${e.params.opacity}"></label>
+      <label>R<input type="range" class="rough"   min="0" max="1" step="0.01" value="${e.params.roughness}"></label>
+      <label>M<input type="range" class="metal"   min="0" max="1" step="0.01" value="${e.params.metalness}"></label>
+    </div>
+  </div>`; parts.appendChild(el);
+  const chk=el.querySelector('.v'); const sel=el.querySelector('.mat'); const col=el.querySelector('.col'); const rough=el.querySelector('.rough'); const metal=el.querySelector('.metal'); const opac=el.querySelector('.opacity'); const btnFit=el.querySelector('.fit');
+  chk.addEventListener('change', ()=>{ e.meshGroup.visible=chk.checked; if(document.getElementById('autoFit').checked) fitOrthoToVisible(); });
+  sel.addEventListener('change', ()=>{ e.params.style=sel.value; applyStyleToGroup(e.meshGroup, e.params.style, e.params.color, e.params.roughness, e.params.metalness, e.params.opacity); });
+  col.addEventListener('input', ()=>{ e.params.color=col.value; e.meshGroup.traverse(o=>{ if(o.isMesh && !(o.material && o.material.side===THREE.BackSide)) o.material.color.set(e.params.color); }); const outline=e.meshGroup.children.find(ch=>ch.name==='__outline__'); if(outline) outline.material.color.copy(new THREE.Color(e.params.color).multiplyScalar(0.2)); });
+  rough.addEventListener('input', ()=>{ e.params.roughness=parseFloat(rough.value); e.meshGroup.traverse(o=>{ if(o.isMesh && 'roughness' in o.material) o.material.roughness=e.params.roughness; }); });
+  metal.addEventListener('input', ()=>{ e.params.metalness=parseFloat(metal.value); e.meshGroup.traverse(o=>{ if(o.isMesh && 'metalness' in o.material) o.material.metalness=e.params.metalness; }); });
+  opac.addEventListener('input', ()=>{ e.params.opacity=parseFloat(opac.value); e.meshGroup.traverse(o=>{ if(o.isMesh && o.material && !(o.material.side===THREE.BackSide)){ o.material.transparent=e.params.opacity<1.0; o.material.opacity=e.params.opacity; o.material.depthWrite=e.params.opacity>=1.0; o.material.needsUpdate=true; }}); });
+  btnFit.addEventListener('click', ()=>{ const b=new THREE.Box3().setFromObject(e.meshGroup); if(!b.isEmpty()){ const c=b.getCenter(new THREE.Vector3()); controls.target.copy(c); fitOrthoToVisible(1.05); }});
+}
+
+// --------- 按 manifest.json 从子文件夹加载 ---------
+async function loadFromFolder(folder){
+  const manifestUrl = `./assets/${folder}/manifest.json`;
+  try{
+    const res = await fetch(manifestUrl, {cache:'no-cache'});
+    if(!res.ok) throw new Error(`manifest ${res.status}`);
+    const cfg = await res.json();
+    if(!cfg || !Array.isArray(cfg.files)) throw new Error('manifest 格式错误');
+
+    // 清空现有
+    registry.forEach(e=>{ scene.remove(e.meshGroup); e.meshGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ if(Array.isArray(o.material)) o.material.forEach(m=>m.dispose()); else o.material.dispose(); } }); });
+    registry.clear(); document.getElementById('parts').innerHTML='';
+
+    for(const item of cfg.files){
+      await loadOne({
+        name: item.name || item.file,
+        url: `./assets/${folder}/${item.file}`,
+        color: item.color || '#cccccc',
+        style: item.style || 'Standard',
+        opacity: typeof item.opacity==='number' ? item.opacity : 1.0,
+		visible: item.visible
+      });
+    }
+
+    // 初始化镜头姿态+target+正交缩放，让第一下鼠标拖拽就是正常绕中心旋转
+    initViewAfterLoad();
+  }catch(err){
+    console.error('加载 manifest 失败', err);
+    // 不显示任何模型；可按需提示
+  }
+}
+
+// --------- 加载单个模型（STL或GLB） ---------
+// 统一加载一个“模型文件”（支持 .stl / .glb / .gltf）
+async function loadOne(def){
+  const ext = def.url.split('.').pop().toLowerCase();
+
+  // 公共：建组、登记、挂 UI 的封装
+  function finalizeWithGroup(grp) {
+    scene.add(grp);
+	grp.visible = (def.visible !== false);  // 👈 根据 manifest.json 中 visible 决定初始显示状态
+    const id = String(nextId++);
+    const params = {
+      style:     def.style   || 'Standard',
+      color:     def.color   || '#ccc',
+      roughness: 0.45,
+      metalness: 0.0,
+      opacity:   def.opacity ?? 1.0
+    };
+    registry.set(id, { name: def.name || def.url.split('/').pop(), meshGroup: grp, params });
+    applyStyleToGroup(grp, params.style, params.color, params.roughness, params.metalness, params.opacity);
+    mountPartUI(id);
+  }
+
+  return new Promise((resolve, reject)=>{
+    if (ext === 'stl') {
+      // —— STL 路径（与你当前一致）——
+      stlLoader.load(def.url, (geom)=>{
+        geom.computeVertexNormals();
+        const innerMat = createMaterial(def.style || 'Standard', def.color || '#ccc', 0.45, 0.0, def.opacity ?? 1.0);
+        const mesh = new THREE.Mesh(geom, innerMat);
+        mesh.castShadow = mesh.receiveShadow = true;
+
+        const grp = new THREE.Group();
+        grp.add(mesh);
+
+        finalizeWithGroup(grp);
+        resolve();
+      }, undefined, (err)=>reject(err));
+
+    } else if (ext === 'glb' || ext === 'gltf') {
+      // —— GLB/GLTF 路径 ——（将 glTF 的 scene 作为一个整体“部件”）
+      const gltfLoader = new GLTFLoader();
+
+      // 如果你的 .glb 使用了 Draco 压缩，取消下一段注释，并把解码器文件放到 ./libs/draco/ 下
+      // import { DRACOLoader } from './libs/DRACOLoader.js';
+      // const draco = new DRACOLoader(); draco.setDecoderPath('./libs/draco/'); gltfLoader.setDRACOLoader(draco);
+
+      gltfLoader.load(def.url, (gltf)=>{
+        const root = gltf.scene || gltf.scenes[0];
+        root.traverse(o=>{
+          if (o.isMesh) {
+            o.castShadow = o.receiveShadow = true;
+            // 为了与 STL 的风格控制保持一致，这里覆盖成统一材质；
+            // 如要保留 GLB 原材质，可删掉下一行：
+            // 1) 没有法线就补
+            const g = o.geometry;
+            if (!g.attributes.normal) {
+              g.computeVertexNormals();
+            }
+      
+            // 2) 先保留 GLB 原材质（通常更“亮”更真实）
+            //    只做安全性微调：双面 + 环境反射强度
+            if (o.material && o.material.isMeshStandardMaterial) {
+              o.material.side = THREE.DoubleSide;
+              if (typeof o.material.envMapIntensity === 'number') {
+                o.material.envMapIntensity = 1.0; // 你也可以做成 UI 滑条
+              }
+              o.material.needsUpdate = true;
+            }
+      
+            // 3) 如果你明确想用统一风格，才覆盖（例如 manifest 里写了 forceStyle）
+            if (def.forceStyle === true) {
+              o.material = createMaterial(def.style || 'Standard',
+                                          def.color || '#ccc',
+                                          0.45, 0.0,
+                                          def.opacity ?? 1.0);
+            }
+          }
+        });
+
+        const grp = new THREE.Group();
+        grp.add(root);
+
+        finalizeWithGroup(grp);
+        resolve();
+      }, undefined, (err)=>reject(err));
+
+    } else {
+      reject(new Error('不支持的文件类型: ' + ext));
+    }
+  });
+}
+
+
+// --------- 交互 ---------
+document.getElementById('btnFit').onclick = ()=> fitOrthoToVisible();
+document.getElementById('btnShot').onclick = ()=>{ const a=document.createElement('a'); a.download='snapshot.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); };
+document.getElementById('showAxes').onchange = e=> axes.visible = e.target.checked;
+window.addEventListener('resize', ()=>{
+resizeMainRenderer();
+fitOrthoToVisible();
+});
+document.getElementById('lightIntensity').oninput = (e)=>{
+  const val = parseFloat(e.target.value);
+  hemi.intensity = val;
+  dir.intensity = val * 1.2; // 稍亮一点的主光
+};
+
+// 帮助开关
+const help = document.getElementById('help');
+document.getElementById('helpBtn').onclick = ()=> help.style.display = 'flex';
+document.getElementById('helpClose').onclick = ()=> help.style.display = 'none';
+help.addEventListener('click', (e)=>{ if(e.target===help) help.style.display='none'; });
+
+// 子文件夹加载
+const folderInput = document.getElementById('folderKey');
+document.getElementById('btnLoadFolder').onclick = ()=>{ const key=folderInput.value.trim(); if(key) loadFromFolder(key); };
+folderInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ const key=folderInput.value.trim(); if(key) loadFromFolder(key); } });
+
+// 固定视角按钮（保持之前功能，可按需外露在 UI）
+function addViewButtons(){
+  const wrap = document.createElement('div'); wrap.className='row';
+  wrap.innerHTML = '<div class="grid2">\
+  <button data-v="front">前视</button>\
+  <button data-v="back">后视</button>\
+  </div><div class="grid2" style="margin-top:6px">\
+  <button data-v="left">左视</button>\
+  <button data-v="right">右视</button>\
+  </div><div class="grid2" style="margin-top:6px">\
+  <button data-v="top">顶视</button>\
+  <button data-v="iso">等轴测</button></div>';
+  document.getElementById('left').insertBefore(wrap, document.querySelector('.hr'));
+  wrap.querySelectorAll('button[data-v]').forEach(b=> b.onclick = ()=> snapView(b.dataset.v));
+}
+// addViewButtons();
+
+// ===== 右下角视角骰子（小场景 + 独立渲染器）=====
+
+// 1) 单独的小 renderer 叠在右下角
+const diceRenderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+diceRenderer.setPixelRatio(window.devicePixelRatio || 1);
+diceRenderer.setSize(120, 120);
+diceRenderer.domElement.id = 'diceCanvas';
+document.body.appendChild(diceRenderer.domElement);
+
+// 2) 小场景与相机
+const diceScene  = new THREE.Scene();
+const diceCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 10);
+diceCamera.position.set(0, 0, 3);
+
+// 3) 灯光
+const diceLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+diceLight1.position.set(3, 4, 5);
+diceScene.add(diceLight1);
+const diceLight2 = new THREE.AmbientLight(0xffffff, 0.5);
+diceScene.add(diceLight2);
+
+// 4) 创建带文字标签的六面骰（而不是旧的14面凸包）
+//    这一函数你前面已经定义了：createLabeledDice(size)
+//    它会返回一个 Group，里面每个面是平面 + 文字纹理，且 plane.userData.viewDir = 朝向向量
+const diceGroup = createLabeledDice(1.0);
+diceScene.add(diceGroup);
+
+// 让骰子整体有一点缩小，不要太大顶格
+diceGroup.scale.set(0.7, 0.7, 0.7);
+
+// 5) 让骰子的朝向跟随主相机
+function syncDiceOrientation(){
+    // 方案：骰子显示的是“世界坐标系的方位”，通常我们希望它表现为
+    // ‘如果我现在是看Front，骰子的FRONT朝我’
+    // 也就是 diceGroup 的旋转 = 主相机旋转的逆
+    diceGroup.quaternion.copy(camera.quaternion).invert();
+}
+
+// 6) 点击拾取：点到某个标注面 => 直接把主相机切到那个方向
+const diceRay = new THREE.Raycaster();
+const diceMouse = new THREE.Vector2();
+
+diceRenderer.domElement.addEventListener('pointerdown', (ev)=>{
+    const rect = diceRenderer.domElement.getBoundingClientRect();
+    const x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+
+    diceMouse.set(x, y);
+    diceRay.setFromCamera(diceMouse, diceCamera);
+
+    // 点的是 diceGroup 里的子平面（带文字的那块 plane）
+    const hits = diceRay.intersectObjects(diceGroup.children, true);
+    if (!hits.length) return;
+
+    const hitObj = hits[0].object;
+    const dir = hitObj.userData.viewDir;
+    if (!dir) return;
+
+    /*
+	console.log('[dice] click label => dir =',
+        [dir.x.toFixed(3), dir.y.toFixed(3), dir.z.toFixed(3)],
+        'faceLabel=', hitObj.material && hitObj.material.map ? 'hasLabelTexture' : '');
+    */
+
+    // 把这个方向传给 snapByDirection，直接瞬间切主相机视角
+    snapByDirection(dir.clone().normalize());
+});
+
+// 7) 窗口缩放时更新右下角 renderer / 相机
+function resizeDice(){
+    const s = 120; // 与 CSS #diceCanvas 的宽高同步
+    diceRenderer.setSize(s, s);
+    diceCamera.aspect = 1;
+    diceCamera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resizeDice);
+
+// 渲染主场景 + 小骰子
+(function loop(){
+    // 主场景
+    controls.update();
+    renderer.render(scene, camera);
+
+    // 小骰子同步朝向后再渲染
+    syncDiceOrientation();
+    diceRenderer.render(diceScene, diceCamera);
+
+    requestAnimationFrame(loop);
+})();
+
+
+</script>
+</body>
+</html>
