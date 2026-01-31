@@ -38,7 +38,7 @@ export default function ToothScene({ editMode, transformMode }) {
   }
 
   const handlePointerMissed = (e) => {
-    if (editMode || isDraggingGizmo) return
+    if (isDraggingGizmo) return
     if (e?.button !== 0) return
     setSelectedId(null)
   }
